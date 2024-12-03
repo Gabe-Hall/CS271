@@ -1,151 +1,91 @@
 /****************************************
  * C-ploration 4 for CS 271
  *
- * [NAME] $YOUR_NAME$
- * [TERM] FALL $YEAR$
+ * [NAME] Gabriel Hall
+ * [TERM] FALL 2024
  *
  ****************************************/
 #include "parser.h"
 #include "symtable.h"
 #include "error.h"
-#include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 
-/* Function: strip
-
-removes whitespace and comments from a line
-
- */
+/* Removes comments and whitespace from a line */
 char *strip(char *s) {
     char s_new[MAX_LINE_LENGTH + 1];
     int i = 0;
-
     for (char *s2 = s; *s2; s2++) {
-        if (*s2 == '/' && *(s2 + 1) == '/') {
-            break; // ignore comments
-        }
-
-        if (!isspace(*s2)) {
-            s_new[i++] = *s2;
-        }
+        if (*s2 == '/' && *(s2 + 1) == '/') break;  // Ignore comments
+        if (!isspace(*s2)) s_new[i++] = *s2;
     }
     s_new[i] = '\0';
     strcpy(s, s_new);
-
     return s;
 }
 
-/* Function: skip_blank_line
+/* Parse the input file */
+void parse(FILE *file) {
+    char line[MAX_LINE_LENGTH] = {0};
+    char label[MAX_LABEL_LENGTH] = {0};
+    unsigned int line_num = 0;
+    unsigned int rom_address = 0;
+    unsigned int instr_num = 0;
 
-checks if the given line is a blank line.
+    while (fgets(line, sizeof(line), file)) {
+        line_num++;
+        strip(line);
+        if (!*line) continue;
 
- */
-bool skip_blank_line(const char *line) {
-    while (*line) {
-        if (!isspace((unsigned char)*line)) {
-            return false;
+        char inst_type = ' ';
+        if (is_Atype(line)) {
+            inst_type = 'A';
+        } else if (is_Ctype(line)) {
+            inst_type = 'C';
+        } else if (is_label(line)) {
+            extract_label(line, label);
+            if (!isalpha(label[0])) {
+                exit_program(EXIT_INVALID_LABEL, line_num, label);
+            }
+            if (symtable_find(label) != NULL) {
+                exit_program(EXIT_SYMBOL_ALREADY_EXISTS, line_num, label);
+            }
+            symtable_insert(label, rom_address);
+            continue;
+        } else {
+            continue;
         }
-        line++;
+
+        printf("%u: %c  %s\n", rom_address, inst_type, line);
+        instr_num++;
+        rom_address++;
+
+        if (instr_num > MAX_INSTRUCTIONS) {
+            exit_program(EXIT_TOO_MANY_INSTRUCTIONS, MAX_INSTRUCTIONS + 1);
+        }
     }
-    return true;
 }
 
-/* Function: is_Atype
-
-determines if the line represents an Atype instruction.
-
- */
+/* Determines if a line is an A-type instruction */
 bool is_Atype(const char *line) {
     return line[0] == '@';
 }
 
-/* Function: is_label
-
-determines if the line represents a label.
-
- */
+/* Determines if a line is a label */
 bool is_label(const char *line) {
-    int len = strlen(line);
+    size_t len = strlen(line);
     return len > 1 && line[0] == '(' && line[len - 1] == ')';
 }
 
-/* Function: extract_label
-
-extracts a label from a line and removes parentheses.
-
- */
-char *extract_label(const char *line, char *label) {
-    int length = strlen(line);
-
-    // check if the line has parentheses as expected
-    if (line[0] == '(' && line[length - 1] == ')') {
-        strncpy(label, line + 1, length - 2); // copy without the parentheses
-        label[length - 2] = '\0'; // null terminate the string
-    }
-
-    return label;
-}
-
-/* Function: is_Ctype
-
-determines if the line represents a Ctype instruction.
-
- */
+/* Determines if a line is a C-type instruction */
 bool is_Ctype(const char *line) {
-    return line[0] != '@' && line[0] != '(' && !skip_blank_line(line);
+    return !is_Atype(line) && !is_label(line);
 }
 
-/* Function: parse
-
-parses the input file, extracting instructions and labels.
-
- */
-#include "parser.h"
-#include "symtable.h"
-#include "error.h"
-#include <stdbool.h>
-#include <string.h>
-
-void parse(FILE *file) {
-    char line[256];
-    unsigned int line_num = 0;  // tracks the line number
-    unsigned int instr_num = 1; // start instruction number at 1
-
-    while (fgets(line, sizeof(line), file)) {
-        line_num++;
-        strip(line); // remove comments and whitespace
-
-        if (skip_blank_line(line)) {
-            continue; // skip blank lines
-        }
-
-        if (instr_num > MAX_INSTRUCTIONS) {
-            exit_program(EXIT_TOO_MANY_INSTRUCTIONS, MAX_INSTRUCTIONS);
-        }
-
-        char inst_type = ' '; // default to space for unknown instruction types
-
-        if (is_Atype(line)) {
-            inst_type = 'A';
-            printf("%u: %c  %s\n", instr_num, inst_type, line);
-            instr_num++; // increment instruction count for A type
-        } else if (is_label(line)) {
-            char label[MAX_LABEL_LENGTH];
-            extract_label(line, label);
-
-            if (!isalpha(label[0])) {
-                exit_program(EXIT_INVALID_LABEL, line_num, line); // use `line` for correct format
-            }
-
-            if (symtable_find(label) != NULL) {
-                exit_program(EXIT_SYMBOL_ALREADY_EXISTS, line_num, line); // sse `line` for correct format
-            }
-
-            symtable_insert(label, instr_num); // label linked with the current instruction number
-        } else if (is_Ctype(line)) {
-            inst_type = 'C';
-            printf("%u: %c  %s\n", instr_num, inst_type, line);
-            instr_num++; // increment instruction count for C type
-        }
-    }
+/* Extracts the label from a line */
+char *extract_label(const char *line, char *label) {
+    size_t len = strlen(line) - 2;
+    strncpy(label, line + 1, len);
+    label[len] = '\0';
+    return label;
 }

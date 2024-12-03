@@ -15,8 +15,6 @@
 
  *
  ****************************************/
-#include <stdio.h>
-#include <stdlib.h>
 #include "parser.h"
 #include "symtable.h"
 #include "error.h"
@@ -26,13 +24,14 @@ int main(int argc, const char *argv[]) {
         exit_program(EXIT_INCORRECT_ARGUMENTS, argv[0]);
     }
 
-    FILE *file = fopen(argv[1], "r");
+    const char *file_name = argv[1];
+    FILE *file = fopen(file_name, "r");
     if (file == NULL) {
-        exit_program(EXIT_CANNOT_OPEN_FILE, argv[1]);
+        exit_program(EXIT_CANNOT_OPEN_FILE, file_name);
     }
 
     parse(file);
 
     fclose(file);
-    return EXIT_SUCCESS;
+    return 0;
 }
