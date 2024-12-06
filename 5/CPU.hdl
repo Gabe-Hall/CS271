@@ -33,4 +33,23 @@ CHIP CPU {
 
     PARTS:
 	//// Replace this comment with your code.
+    Mux16(a=instruction, b=ALUOutput, sel=instruction[15], out=InputForA);
+    Mux(a=true, b=instruction[5], sel=instruction[15], out=loadA);
+    ARegister(in=InputForA, load=loadA, out=RegisterA, out[0..14]=addressM);
+    Mux(a=false, b=instruction[4], sel=instruction[15], out=loadD);
+    DRegister(in=ALUOutput, load=loadD, out=RegisterD);
+    Mux(a=false, b=instruction[3], sel=instruction[15], out=writeM);
+    Mux16(a=RegisterA, b=inM, sel=instruction[12], out=SelectAorM);
+    ALU(x=RegisterD, y=SelectAorM, 
+    zx=instruction[11], nx=instruction[10], zy=instruction[9], 
+    ny=instruction[8], f=instruction[7], no=instruction[6], 
+    out=ALUOutput, out=outM, zr=Zero, ng=Negative);
+    Or(a=Zero, b=Negative, out=NotPositive);
+    Not(in=NotPositive, out=Positive);
+    And(a=instruction[0], b=Positive, out=JCode1);
+    And(a=instruction[1], b=Zero, out=JCode2);
+    And(a=instruction[2], b=Negative, out=JCode3);
+    Or8Way(in[0]=JCode1, in[1]=JCode2, in[2]=JCode3, in[3..7]=false, out=JMPCode);
+    Mux(a=false, b=JMPCode, sel=instruction[15], out=loadPC);
+    PC(in=RegisterA, load=loadPC, inc=true, reset=reset, out[0..14]=pc);
 }
