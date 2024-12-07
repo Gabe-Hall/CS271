@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -I.
-LDFLAGS = 
+LDFLAGS =
 OBJFILES = main.o parser.o symtable.o error.o
 TARGET = main
 
