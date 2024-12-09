@@ -50,12 +50,12 @@ typedef struct instruction {
 } instruction;
 
 char *strip(char *s);
-void parse(FILE *file);
-bool is_Atype(const char *line);
-bool is_label(const char *line);
-bool is_Ctype(const char *line);
+void parse(FILE * file);
+bool is_Atype (const char *);
+bool is_label(const char *);
+bool is_Ctype(const char *);
 void add_predefined_symbols();
 char *extract_label(const char *line, char *label);
 bool parse_A_instruction(const char *line, a_instruction *instr);
 
-#endif // __PARSER_H__
+#endif

@@ -2,17 +2,14 @@
 #include "symtable.h"
 #include "error.h"
 #include "hack.h"
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
 
-char *strip(char *s) {
+char *strip(char *s){
     char s_new[strlen(s) + 1];
     int i = 0;
     for (char *s2 = s; *s2; s2++) {
         if (*s2 == '/' && *(s2 + 1) == '/') {
             break;
-        } else if (!isspace(*s2)) {
+        } else if (!isspace((unsigned char)*s2)) {
             s_new[i++] = *s2;
         }
     }
@@ -23,23 +20,30 @@ char *strip(char *s) {
 
 void parse(FILE *file) {
     char line[MAX_LINE_LENGTH] = {0};
-    unsigned int line_num = 0, rom_address = 0;
-
+    int rom_address = 0;
+    unsigned int line_num = 0;
+    unsigned int instr_num = 0;
     add_predefined_symbols();
     instruction instr;
 
     while (fgets(line, sizeof(line), file)) {
         line_num++;
+        if (instr_num > MAX_INSTRUCTIONS) {
+            exit_program(EXIT_TOO_MANY_INSTRUCTIONS, MAX_INSTRUCTIONS + 1);
+        }
         strip(line);
-
-        if (!*line) continue; // Skip blank lines
+        if (!*line) {
+            continue; // Skip blank lines
+        }
 
         if (is_label(line)) {
             char label[MAX_LABEL_LENGTH] = {0};
-            extract_label(line, label);
-
-            if (!isalpha(label[0]) || symtable_find(label)) {
+            strcpy(line, extract_label(line, label));
+            if (!isalpha((unsigned char)label[0])) {
                 exit_program(EXIT_INVALID_LABEL, line_num, label);
+            }
+            if (symtable_find(label) != NULL) {
+                exit_program(EXIT_SYMBOL_ALREADY_EXISTS, line_num, label);
             }
             symtable_insert(label, rom_address);
         } else if (is_Atype(line)) {
@@ -52,6 +56,7 @@ void parse(FILE *file) {
             instr.type = C_TYPE_INSTR;
             rom_address++;
         }
+        instr_num++;
     }
 }
 
@@ -60,7 +65,7 @@ bool is_Atype(const char *line) {
 }
 
 bool is_label(const char *line) {
-    return line[0] == '(' && line[strlen(line) - 1] == ')';
+    return (line[0] == '(' && line[strlen(line)-1] == ')');
 }
 
 bool is_Ctype(const char *line) {
@@ -69,8 +74,12 @@ bool is_Ctype(const char *line) {
 
 char *extract_label(const char *line, char *label) {
     int i = 0;
-    for (const char *s = line + 1; *s && *s != ')'; s++) {
-        label[i++] = *s;
+    for (const char *s = line; *s; s++){
+        if (*s == '(' || *s == ')') {
+            continue;
+        } else {
+            label[i++] = *s;
+        }
     }
     label[i] = '\0';
     return label;
@@ -83,16 +92,21 @@ void add_predefined_symbols() {
 }
 
 bool parse_A_instruction(const char *line, a_instruction *instr) {
-    char *s = malloc(strlen(line));
+    char *s = (char *)malloc(strlen(line) + 1);
     if (!s) return false;
-    strcpy(s, line + 1); // Skip '@'
+    strcpy(s, line + 1);
+
     char *s_end = NULL;
     long result = strtol(s, &s_end, 10);
-
-    if (s == s_end) {  // Not a number
-        instr->operand.label = strdup(s);
+    if (s == s_end) {
+        instr->operand.label = (char *)malloc(strlen(s) + 1);
+        if (!instr->operand.label) {
+            free(s);
+            return false;
+        }
+        strcpy(instr->operand.label, s);
         instr->is_addr = false;
-    } else if (*s_end != '\0') {  // Invalid number
+    } else if (*s_end != '\0') {
         free(s);
         return false;
     } else {

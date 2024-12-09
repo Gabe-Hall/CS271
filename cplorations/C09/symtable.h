@@ -12,15 +12,15 @@
 
 typedef int16_t hack_addr;
 
-typedef struct Symbol{
+typedef struct Symbol {
     char* name;
     hack_addr address;
 } Symbol;
 
 int hash(const char *str);
-Symbol *symtable_find(const char * key);
-void symtable_insert(const char *key, hack_addr addr);
+struct Symbol *symtable_find(const char *key);
+void symtable_insert(const char* key, hack_addr addr);
 void symtable_display_table();
 void symtable_print_labels();
 
-#endif // __SYMTABLE_H__
+#endif
