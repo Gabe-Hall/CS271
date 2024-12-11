@@ -17,7 +17,9 @@ enum exitcode {
     EXIT_INVALID_A_INSTR,
     EXIT_INVALID_C_DEST,
     EXIT_INVALID_C_COMP,
-    EXIT_INVALID_C_JUMP
+    EXIT_INVALID_C_JUMP,
+    EXIT_OUT_OF_MEMORY,          // New error code
+    EXIT_ASSEMBLY_FAILED         // New error code
 };
 
 void exit_program(enum exitcode code, ...);

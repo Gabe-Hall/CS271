@@ -1,3 +1,5 @@
+// main.c
+
 #include "parser.h"
 #include "symtable.h"
 #include "error.h"
@@ -7,27 +9,28 @@
 
 int main(int argc, const char *argv[]) {
     if (argc != 2) {
-        // Incorrect number of arguments
         exit_program(EXIT_INCORRECT_ARGUMENTS, argv[0]);
     }
 
     const char *file_name = argv[1];
     FILE *file = fopen(file_name, "r");
     if (file == NULL) {
-        exit_program(EXIT_CANNOT_OPEN_FILE, argv[1]);
+        exit_program(EXIT_CANNOT_OPEN_FILE, file_name);
     }
 
     instruction *instructions = malloc(MAX_INSTRUCTION_COUNT * sizeof(instruction));
-    if (!instructions) {
+    if (instructions == NULL) {
         fclose(file);
-        exit_program(EXIT_TOO_MANY_INSTRUCTIONS, MAX_INSTRUCTION_COUNT);
+        exit_program(EXIT_OUT_OF_MEMORY);
     }
 
-    parse(file, instructions); // Removed 'num_instructions' variable
-    // printf("Total Instructions Parsed: %d\n", num_instructions); // Removed
-    // symtable_print_labels(); // Removed
-
+    int num_instructions = parse(file, instructions);
     fclose(file);
+
+    // Call assemble function directly since it returns void
+    assemble(file_name, instructions, num_instructions);
+
     free(instructions);
+
     return 0;
 }
